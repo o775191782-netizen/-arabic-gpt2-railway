@@ -1,0 +1,24 @@
+from flask import Flask, request, jsonify
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+app = Flask(__name__)
+
+model_name = "asafaya/arabic-gpt2-medium"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = model.to(device)
+
+@app.route("/generate", methods=["POST"])
+def generate():
+    data = request.json
+    prompt = data.get("prompt", "")
+    input_ids = tokenizer.encode(prompt, return_tensors="pt").to(device)
+    output_ids = model.generate(input_ids, max_length=100)
+    output_text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
+    return jsonify({"response": output_text})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
